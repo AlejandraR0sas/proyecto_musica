@@ -26,7 +26,7 @@
 
 :- use_module(library(www_browser)).
 
-texto_cancion(cancion(_Id, Titulo, Artista, Genero, _E, _A, Idioma, _Enlace), Texto) :-
+texto_cancion(cancion(_Id, Titulo, artistas, Genero, _E, _A, Idioma, _Enlace), Texto) :-
     format(atom(Texto), '~w - ~w (~w, ~w)', [Titulo, Artista, Genero, Idioma]).
 
 reproducir(cancion(_Id, _T, _Ar, _G, _E, _A, _I, Enlace)) :-
@@ -34,3 +34,4 @@ reproducir(cancion(_Id, _T, _Ar, _G, _E, _A, _I, Enlace)) :-
     ->  true
     ;   format('No pude abrir el navegador. Copia este enlace:~n  ~w~n', [Enlace])
     ).
+
