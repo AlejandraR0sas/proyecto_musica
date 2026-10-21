@@ -1,0 +1,13 @@
+# Secretos (si alguien usa una API, las claves van aqui y NO se suben)
+secretos.pl
+.env
+
+# Archivos generados por SWI-Prolog
+*.qlf
+*.log
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+~$*
+*.tmp
