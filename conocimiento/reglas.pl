@@ -1,8 +1,10 @@
 :- encoding(utf8).
 /* ============================================================================
-   conocimiento/reglas.pl        >>> RESPONSABLE: OSIEL <<<
-   BASE DE CONOCIMIENTOS (parte 1): variables, emociones y reglas de produccion.
+   PROPUESTA de conocimiento/reglas.pl        >>> RESPONSABLE: OSIEL <<<
+   BORRADOR PARA REVISION: no sustituye al archivo original todavia.
    ============================================================================
+   BASE DE CONOCIMIENTOS (parte 1): variables, emociones y reglas de produccion.
+
    Este archivo es el CORAZON del sistema experto. Solo contiene HECHOS Prolog
    (datos), nada de logica. El motor (src/motor.pl) es generico y lee esto.
 
@@ -13,7 +15,7 @@
      4) descripcion/2       -> texto en espanol de cada regla (lo usa la explicacion)
 
    ---------------------------------------------------------------------------
-   REGLAS DE ORO (para que todos estemos en sintonia)
+   REGLAS DE ORO
    ---------------------------------------------------------------------------
    * TODO en minusculas, SIN acentos ni enes en los atomos (acompanar, alegria).
      Los acentos solo en textos de descripcion/pregunta (entre comillas simples).
@@ -22,13 +24,11 @@
        r01-r29  -> ETAPA 1: de las respuestas del usuario -> emocion(...)
        r30-r59  -> ETAPA 2: de emocion/contexto/objetivo   -> perfil(Energia,Animo)
    * El ORDEN en el archivo = PRIORIDAD. Si dos reglas pueden dar una emocion
-     (o un perfil), gana la que esta MAS ARRIBA. Pongan las mas especificas
-     primero y las mas generales al final.
+     (o un perfil), gana la que esta MAS ARRIBA. Las mas especificas van primero
+     y las mas generales al final.
    * Solo se permite UNA emocion y UN perfil por consulta (lo garantiza el motor).
    * Cada ID de aqui debe aparecer igual en: tabla de decisiones, arbol de
      decision, descripcion/2 y pruebas/pruebas.pl (columna "reglas esperadas").
-   * Si cambian nombres de variables o valores, AVISEN EN EL GRUPO y actualicen
-     el README, porque se rompen interfaz, motor y pruebas.
 
    ---------------------------------------------------------------------------
    FORMATO DE regla/3
@@ -36,8 +36,7 @@
        regla(Id, [Condicion1, Condicion2, ...], Conclusion).
 
    * Condicion = un hecho: animo(bajo), energia(baja), emocion(tristeza), etc.
-   * Tambien se acepta no(Hecho) solo sobre variables de ENTRADA
-     (ej. no(contexto(dormir))). Usenlo poco.
+   * Tambien se acepta no(Hecho) solo sobre variables de ENTRADA.
    * Conclusion = emocion(E)  o  perfil(EnergiaMusical, AnimoMusical)
 
    ---------------------------------------------------------------------------
@@ -45,30 +44,30 @@
    ---------------------------------------------------------------------------
    perfil(Energia, Animo) se compara con los campos Energia y Animo de
    cancion/8 (conocimiento/canciones.pl). Mismos valores: baja/media/alta y
-   bajo/neutro/alto. Por eso cada perfil que usen en una regla DEBE tener
-   al menos una cancion en el catalogo (si no, el resultado es sin_canciones).
+   bajo/neutro/alto. Cada perfil usado aqui tiene canciones en el catalogo.
 
    ---------------------------------------------------------------------------
    TAREAS DE OSIEL (checklist)
    ---------------------------------------------------------------------------
-   [ ] Investigar fuentes (musicoterapia, psicologia de la musica) -> reporte
-   [ ] Confirmar/ajustar variables y valores de abajo (cerrar HOY, miercoles 21)
-   [ ] Cubrir las 6 emociones con reglas de etapa 1 (r01-r29)
-   [ ] Cubrir cada emocion x objetivo (acompanar/cambiar) en etapa 2 (r30-r59)
-   [ ] Escribir una descripcion/2 por cada regla
-   [ ] Revisar coherencia: que no haya reglas contradictorias ni emociones sin
-       perfil. Documentar combinaciones NO cubiertas (sirven para pruebas).
+   [x] Investigar fuentes (musicoterapia, psicologia de la musica) -> reporte
+   [x] Confirmar variables y valores (sin cambios respecto al acuerdo del README)
+   [x] Cubrir las 6 emociones con reglas de etapa 1 (r01-r07)
+   [x] Cubrir cada emocion x objetivo (acompanar/cambiar) en etapa 2 (r30-r42)
+   [x] Escribir una descripcion/2 por cada regla
+   [x] Revisar coherencia: sin reglas contradictorias y todos los perfiles con
+       canciones. Combinaciones NO cubiertas documentadas en propuestas/REVISION.md
    [ ] Dibujar arbol de decision + tabla de decisiones para el reporte
+       (borrador listo en propuestas/REVISION.md; falta pasarlo al documento)
+   [ ] Avisar a Ale de los cambios de IDs/resultados que afectan pruebas.pl
+       (T06 cambia y faltan casos para enojo, calma y motivacion)
    ============================================================================ */
 
 :- discontiguous variable/3, catalogo_emocion/2, regla/3, descripcion/2.
 
 /* ---------------------------------------------------------------------------
-   1) VARIABLES DE ENTRADA
+   1) VARIABLES DE ENTRADA  (confirmadas, sin cambios)
       variable(Nombre, ValoresPermitidos, TextoDeLaPregunta).
-      La interfaz y la validacion se generan A PARTIR DE ESTO: si agregan una
-      variable aqui, aparece sola en consola/GUI (y hay que usarla en reglas).
-   --------------------------------------------------------------------------- */
+    --------------------------------------------------------------------------- */
 variable(animo,    [bajo, neutro, alto],
          'Como describirias tu animo en este momento?').
 variable(energia,  [baja, media, alta],
@@ -81,9 +80,8 @@ variable(objetivo, [acompanar, cambiar],
          'Quieres que la musica acompane tu emocion o que la cambie?').
 
 /* ---------------------------------------------------------------------------
-   2) EMOCIONES QUE EL SISTEMA PUEDE INFERIR
-      catalogo_emocion(Id, DescripcionCorta).
-   --------------------------------------------------------------------------- */
+   2) EMOCIONES QUE EL SISTEMA PUEDE INFERIR  (6 confirmadas)
+    --------------------------------------------------------------------------- */
 catalogo_emocion(alegria,    'Estado animico positivo y con energia.').
 catalogo_emocion(tristeza,   'Animo bajo y poca energia.').
 catalogo_emocion(estres,     'Tension alta con mucha activacion.').
@@ -93,44 +91,76 @@ catalogo_emocion(motivacion, 'Animo y energia altos orientados a una actividad.'
 
 /* ---------------------------------------------------------------------------
    3) REGLAS - ETAPA 1: respuestas del usuario -> emocion(E)
-      (EJEMPLOS DE ARRANQUE: Osiel los puede cambiar/completar. Si cambian
-       condiciones o IDs, actualicen pruebas/pruebas.pl)
-      Recordatorio: orden = prioridad (especificas arriba, generales abajo).
-      Sugerencia de partida para las demas emociones:
-        enojo      : tension(alta) + animo(bajo) + energia(alta)   (antes de estres)
-        calma      : tension(baja) + animo(neutro) + energia(baja)
-        motivacion : animo(alto) + energia(alta) + contexto(ejercicio)  (antes de alegria)
-   --------------------------------------------------------------------------- */
-regla(r01, [animo(bajo), energia(baja)],            emocion(tristeza)).
-regla(r02, [tension(alta), energia(alta)],          emocion(estres)).
-regla(r03, [animo(alto), energia(alta)],            emocion(alegria)).
-% TODO Osiel: r04 enojo, r05 calma, r06 motivacion, ... (hasta r29 si hace falta)
+      ORDEN = PRIORIDAD. Las especificas van antes que las generales.
+      Nota: los IDs se conservan de la version anterior (r01 tristeza,
+      r02 estres, r03 alegria) para no romper T01-T05; el orden fisico manda.
+    --------------------------------------------------------------------------- */
+% 1. Enojo: alta activacion + tension + animo bajo (lo mas especifico).
+regla(r04, [tension(alta), animo(bajo), energia(alta)], emocion(enojo)).
+
+% 2. Motivacion: alegria con energia puesta en una actividad.
+regla(r06, [animo(alto), energia(alta), contexto(ejercicio)], emocion(motivacion)).
+
+% 3-4. Calma: baja tension con animo estable (dos niveles de energia).
+regla(r05, [tension(baja), animo(neutro), energia(baja)], emocion(calma)).
+regla(r07, [tension(baja), animo(neutro), energia(media)], emocion(calma)).
+
+% 5. Tristeza: animo bajo con poca energia.
+regla(r01, [animo(bajo), energia(baja)], emocion(tristeza)).
+
+% 6. Estres: alta tension con alta activacion (ya filtrados enojo y motivacion).
+regla(r02, [tension(alta), energia(alta)], emocion(estres)).
+
+% 7. Alegria: animo alto con alta energia (ya filtrada la motivacion).
+regla(r03, [animo(alto), energia(alta)], emocion(alegria)).
 
 /* ---------------------------------------------------------------------------
    4) REGLAS - ETAPA 2: emocion + contexto + objetivo -> perfil(Energia, Animo)
       perfil(EnergiaMusical, AnimoMusical) con valores baja/media/alta y
       bajo/neutro/alto (los mismos que usan las canciones).
-      OJO con la prioridad: r30 (dormir) va ANTES que las de emocion, asi que
-      si el usuario va a dormir, esa regla gana sin importar la emocion.
-   --------------------------------------------------------------------------- */
+      r30 (dormir) va ANTES que las de emocion: si el usuario va a dormir,
+      esa regla gana sin importar la emocion.
+    --------------------------------------------------------------------------- */
+% Contexto especial (prioridad maxima).
 regla(r30, [contexto(dormir)],                          perfil(baja, neutro)).
-regla(r31, [emocion(tristeza), objetivo(acompanar)],    perfil(baja, bajo)).
-regla(r32, [emocion(tristeza), objetivo(cambiar)],      perfil(media, alto)).
-regla(r33, [emocion(estres),   objetivo(cambiar)],      perfil(baja, neutro)).
-regla(r34, [emocion(alegria),  objetivo(acompanar)],    perfil(alta, alto)).
-% TODO Osiel: cubrir TODAS las combinaciones emocion x objetivo (6 x 2 = 12
-%             reglas, menos las que ya esten) y los contextos que importen.
+
+% Una regla por emocion x objetivo (IDs en orden; no compiten entre si).
+regla(r31, [emocion(tristeza),  objetivo(acompanar)],   perfil(baja, bajo)).
+regla(r32, [emocion(tristeza),  objetivo(cambiar)],     perfil(media, alto)).
+regla(r33, [emocion(estres),    objetivo(cambiar)],     perfil(baja, neutro)).
+regla(r34, [emocion(alegria),   objetivo(acompanar)],   perfil(alta, alto)).
+regla(r35, [emocion(estres),    objetivo(acompanar)],   perfil(media, bajo)).
+regla(r36, [emocion(enojo),     objetivo(acompanar)],   perfil(alta, bajo)).
+regla(r37, [emocion(enojo),     objetivo(cambiar)],     perfil(media, alto)).
+regla(r38, [emocion(calma),     objetivo(acompanar)],   perfil(baja, neutro)).
+regla(r39, [emocion(calma),     objetivo(cambiar)],     perfil(media, alto)).
+regla(r40, [emocion(motivacion), objetivo(acompanar)],  perfil(alta, alto)).
+regla(r41, [emocion(motivacion), objetivo(cambiar)],    perfil(media, neutro)).
+regla(r42, [emocion(alegria),   objetivo(cambiar)],     perfil(media, neutro)).
 
 /* ---------------------------------------------------------------------------
    5) DESCRIPCIONES (las muestra el modulo de explicacion)
       descripcion(Id, 'Texto breve que justifique la regla').
       Idealmente cita la fuente en el reporte (APA), no aqui.
-   --------------------------------------------------------------------------- */
-descripcion(r01, 'Un animo bajo con poca energia indica tristeza.').
-descripcion(r02, 'Mucha tension con mucha energia indica estres.').
-descripcion(r03, 'Animo alto con mucha energia indica alegria.').
+    --------------------------------------------------------------------------- */
+descripcion(r01, 'Animo bajo con poca energia indica tristeza.').
+descripcion(r02, 'Alta tension con alta energia indica estres.').
+descripcion(r03, 'Animo alto con alta energia indica alegria.').
+descripcion(r04, 'Tension alta con animo bajo y energia alta indica enojo.').
+descripcion(r05, 'Baja tension con animo neutro y energia baja indica calma.').
+descripcion(r06, 'Animo alto con energia alta en una actividad fisica indica motivacion.').
+descripcion(r07, 'Baja tension con animo neutro y energia media indica calma.').
+
 descripcion(r30, 'Para dormir conviene musica suave y estable.').
 descripcion(r31, 'Si quieres acompanar la tristeza: musica lenta y melancolica.').
 descripcion(r32, 'Si quieres salir de la tristeza: musica luminosa de energia media.').
 descripcion(r33, 'Para reducir el estres: musica lenta y neutra.').
-descripcion(r34, 'Para acompanar la alegria: musica energica y positiva.').
+descripcion(r34, 'Para acompanar la alegria: musica energetica y positiva.').
+descripcion(r35, 'Para acompanar el estres: musica intensa de energia media.').
+descripcion(r36, 'Para descargar el enojo: musica intensa de energia alta.').
+descripcion(r37, 'Para cambiar el enojo: musica positiva de energia media.').
+descripcion(r38, 'Para acompanar la calma: musica suave y estable.').
+descripcion(r39, 'Para cambiar la calma: musica positiva de energia media.').
+descripcion(r40, 'Para acompanar la motivacion: musica energetica y positiva.').
+descripcion(r41, 'Para cambiar la motivacion: musica de energia media y tono neutro.').
+descripcion(r42, 'Para cambiar la alegria: musica de energia media y tono neutro.').
