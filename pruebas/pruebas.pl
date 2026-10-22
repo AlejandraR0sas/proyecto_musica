@@ -55,6 +55,22 @@ caso(t10, [],
 % TODO Ale: un caso normal por cada emocion nueva (enojo, calma, motivacion),
 %           un caso sin_canciones (si aplica) y uno de "nueva consulta".
 
+% Casos normales para las emociones anadidas (enojo, calma, motivacion y estres)
+caso(t11, [animo-bajo, energia-alta, tension-alta, contexto-estudiar, objetivo-acompanar],
+     [r04, r36], ok(enojo, perfil(alta, bajo))).
+caso(t12, [animo-bajo, energia-alta, tension-alta, contexto-estudiar, objetivo-cambiar],
+     [r04, r37], ok(enojo, perfil(media, alto))).
+caso(t13, [animo-neutro, energia-baja, tension-baja, contexto-relajarse, objetivo-acompanar],
+     [r05, r38], ok(calma, perfil(baja, neutro))).
+caso(t14, [animo-neutro, energia-baja, tension-baja, contexto-relajarse, objetivo-cambiar],
+     [r05, r39], ok(calma, perfil(media, alto))).
+caso(t15, [animo-alto, energia-alta, tension-media, contexto-ejercicio, objetivo-acompanar],
+     [r06, r40], ok(motivacion, perfil(alta, alto))).
+caso(t16, [animo-alto, energia-alta, tension-media, contexto-ejercicio, objetivo-cambiar],
+     [r06, r41], ok(motivacion, perfil(media, neutro))).
+caso(t17, [animo-neutro, energia-alta, tension-alta, contexto-estudiar, objetivo-acompanar],
+     [r02, r35], ok(estres, perfil(media, bajo))).
+
 % ---- Ejecucion ---------------------------------------------------------------
 correr_pruebas :-
     format('~n===== PRUEBAS =====~n'),
