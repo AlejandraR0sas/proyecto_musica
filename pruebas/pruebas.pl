@@ -77,7 +77,9 @@ correr_pruebas :-
     findall(Estado,
             ( caso(Id, Entrada, ReglasEsp, Esperado),
               ejecutar_caso(Id, Entrada, ReglasEsp, Esperado, Estado) ),
-            Estados),
+            Estados0),
+    prueba_aprendizaje(EstadoAprendizaje),
+    append(Estados0, [EstadoAprendizaje], Estados),
     include(==(pass), Estados, Pasan),
     length(Pasan, NPasan),
     length(Estados, Total),
@@ -113,3 +115,23 @@ capturar_entrada([V-Val | Resto], Invalida) :-
 resumen(ok(E, P, _), ok(E, P))        :- !.
 resumen(incompleto(_), incompleto)    :- !.
 resumen(Otro, Otro).
+% ---- T18: aprendizaje de una emocion nueva (solo en memoria, no toca el archivo)
+prueba_aprendizaje(Estado) :-
+    limpiar_hechos,
+    Nombre = emocion_de_prueba,
+    registrar_emocion(Nombre, perfil(baja, bajo), perfil(media, alto)),
+    capturar(contexto, relajarse),
+    capturar(objetivo, cambiar),
+    declarar_emocion(Nombre),
+    ejecutar_consulta_directa(Resultado),
+    resumen(Resultado, Resumen),
+    findall(R, disparada(R), Reglas),
+    (   Resumen == ok(Nombre, perfil(media, alto))
+    ->  Estado = pass, Etiqueta = 'PASS'
+    ;   Estado = fail, Etiqueta = 'FAIL'
+    ),
+    format('T18  ~w  (aprender una emocion nueva y usarla)~n', [Etiqueta]),
+    format('    esperado: ok(~w, perfil(media,alto))~n', [Nombre]),
+    format('    obtenido: ~w  reglas ~w~n', [Resumen, Reglas]),
+    olvidar_emocion(Nombre),
+    limpiar_hechos.
