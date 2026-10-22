@@ -136,9 +136,68 @@ guardar_en_archivo(Hecho) :-
         open(Ruta, append, Stream, [encoding(utf8)]),
         format(Stream, '~q.~n', [Hecho]),
         close(Stream)).
+% ---- Aprender canciones ----------------------------------------------------
+% El usuario da titulo, artista y genero. Energia y animo salen del perfil
+% de la consulta actual. Idioma se pone en 'otro' (no se pregunta).
+aprender_cancion(Titulo, Artista, Genero, Perfil) :-
+    agregar_cancion(disco, Titulo, Artista, Genero, Perfil).
+registrar_cancion(Titulo, Artista, Genero, Perfil) :-
+    agregar_cancion(memoria, Titulo, Artista, Genero, Perfil).
 
+agregar_cancion(Modo, Titulo, Artista, Genero, perfil(E, A)) :-
+    texto_no_vacio(Titulo),
+    texto_no_vacio(Artista),
+    atom(Genero), Genero \== '',
+    perfil_valido(perfil(E, A)),
+    \+ cancion_duplicada(Titulo, Artista),
+    nuevo_id_cancion(Id),
+    enlace_youtube(Artista, Titulo, Enlace),
+    agregar(Modo, cancion(Id, Titulo, Artista, Genero, E, A, otro, Enlace)).
+
+texto_no_vacio(Texto) :-
+    atom(Texto),
+    Texto \== ''.
+
+cancion_duplicada(Titulo, Artista) :-
+    downcase_atom(Titulo, T),
+    downcase_atom(Artista, A),
+    cancion(_, T0, A0, _, _, _, _, _),
+    downcase_atom(T0, T),
+    downcase_atom(A0, A).
+
+% IDs correlativos c031, c032, ... (3 digitos, a partir del maximo existente).
+nuevo_id_cancion(Id) :-
+    findall(N, numero_id_cancion(N), Ns),
+    max_list([0 | Ns], Max),
+    N1 is Max + 1,
+    pad_id_cancion(N1, Id).
+
+numero_id_cancion(N) :-
+    cancion(I, _, _, _, _, _, _, _),
+    atom(I),
+    sub_atom(I, 0, 1, _, c),
+    sub_atom(I, 1, _, 0, NumAtom),
+    atom_number(NumAtom, N).
+
+pad_id_cancion(N, Id) :-
+    format(atom(Num), '~w', [N]),
+    atom_length(Num, L),
+    (   L >= 3 -> atom_concat(c, Num, Id)
+    ;   L =:= 2 -> atom_concat(c0, Num, Id)
+    ;   atom_concat(c00, Num, Id)
+    ).
+
+% Coldplay + Yellow -> https://www.youtube.com/results?search_query=Coldplay+Yellow
+enlace_youtube(Artista, Titulo, Enlace) :-
+    format(atom(Texto), '~w ~w', [Artista, Titulo]),
+    atomic_list_concat(Partes0, ' ', Texto),
+    exclude(=(''), Partes0, Partes),
+    atomic_list_concat(Partes, '+', Query),
+    atom_concat('https://www.youtube.com/results?search_query=', Query, Enlace).
 % ---- Olvidar (solo memoria; para pruebas) ----------------------------------
 olvidar_emocion(Nombre) :-
     forall(( regla(Id, Condiciones, _), memberchk(emocion(Nombre), Condiciones) ),
            ( retract(regla(Id, _, _)), retractall(descripcion(Id, _)) )),
     retractall(catalogo_emocion(Nombre, _)).
+olvidar_cancion(Id) :-
+    retractall(cancion(Id, _, _, _, _, _, _, _)).

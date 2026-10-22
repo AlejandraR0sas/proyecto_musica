@@ -13,7 +13,8 @@
    motor -> explicacion -> aprendizaje -> musica -> interfaz -> pruebas.
    Las rutas son relativas a ESTE archivo.
    ============================================================================ */
-
+:- multifile cancion/8.
+:- dynamic   cancion/8.
 :- [ '../conocimiento/reglas',
      '../conocimiento/canciones',
      '../conocimiento/aprendido',
@@ -131,6 +132,14 @@ leer_atomo(Atomo) :-
         atom_string(Atomo, Minus)
     ).
 
+% Lee una linea conservando mayusculas (titulo / artista).
+leer_linea(Texto) :-
+    read_line_to_string(user_input, Linea),
+    (   Linea == end_of_file
+    ->  halt
+    ;   normalize_space(string(Texto), Linea)
+    ).
+
 confirmar(Prompt) :-
     format(Prompt),
     leer_atomo(R),
@@ -145,7 +154,8 @@ mostrar_resultado(ok(Emocion, perfil(E, A), Canciones)) :-
     forall(nth1(N, Canciones, C),
            ( texto_cancion(C, T), format('  ~w) ~w~n', [N, T]) )),
     mostrar_explicacion,
-    ofrecer_reproduccion(Canciones).
+    ofrecer_reproduccion(Canciones),
+    ofrecer_agregar_cancion(perfil(E, A)).
 mostrar_resultado(incompleto(Faltantes)) :-
     !,
     format('~nFaltan datos por responder: ~w~n', [Faltantes]).
@@ -163,7 +173,8 @@ mostrar_resultado(sin_canciones(perfil(E, A))) :-
     !,
     format('~nHay un perfil (energia ~w, animo ~w) pero no hay canciones en el catalogo.~n',
            [E, A]),
-    mostrar_explicacion.
+    mostrar_explicacion,
+    ofrecer_agregar_cancion(perfil(E, A)).
 
 % Cuando el sistema no logra inferir la emocion, se la pide al usuario
 % (y la aprende si no la conoce).
@@ -192,4 +203,30 @@ ofrecer_reproduccion(Canciones) :-
     ;   true
     ).
 
+ofrecer_agregar_cancion(Perfil) :-
+    (   confirmar('~nQuieres sugerir/agregar una cancion para este estado de animo? (s/n): ')
+    ->  dialogo_agregar_cancion(Perfil)
+    ;   true
+    ).
+
+dialogo_agregar_cancion(perfil(E, A)) :-
+    format('~nTitulo (ej: Yellow): '),
+    leer_linea(TituloS),
+    format('Artista (ej: Coldplay): '),
+    leer_linea(ArtistaS),
+    format('Genero (ej: rock): '),
+    leer_linea(GeneroS),
+    (   (TituloS == '' ; ArtistaS == '' ; GeneroS == '')
+    ->  format('~nFaltan datos. No se guardo la cancion.~n')
+    ;   atom_string(Titulo, TituloS),
+        atom_string(Artista, ArtistaS),
+        normalizar(GeneroS, Genero),
+        (   cancion_duplicada(Titulo, Artista)
+        ->  format('~nEsa cancion ya esta en el catalogo.~n')
+        ;   aprender_cancion(Titulo, Artista, Genero, perfil(E, A)),
+            cancion(Id, Titulo, Artista, _, _, _, _, _)
+        ->  format('~nListo, la guarde como ~w en conocimiento/aprendido.pl.~n', [Id])
+        ;   format('~nNo pude guardar esa cancion.~n')
+        )
+    ).
 :- format('~nProyecto cargado. Escribe  ?- iniciar.   o   ?- correr_pruebas.~n').

@@ -13,7 +13,12 @@
    - Hagan commit de este archivo si quieren compartir lo aprendido.
    ============================================================================ */
 
-:- multifile catalogo_emocion/2, regla/3, descripcion/2.
-:- dynamic   catalogo_emocion/2, regla/3, descripcion/2.
+:- multifile catalogo_emocion/2, regla/3, descripcion/2, cancion/8.
+:- dynamic   catalogo_emocion/2, regla/3, descripcion/2, cancion/8.
 
 % ===== LO APRENDIDO EMPIEZA AQUI (no escribir arriba de esta linea) =====
+catalogo_emocion(nostalgia,'Emocion aprendida del usuario.').
+regla(r60,[emocion(nostalgia),objetivo(acompanar)],perfil(baja,bajo)).
+descripcion(r60,'Regla aprendida: para nostalgia con objetivo acompanar conviene musica de energia baja y animo bajo.').
+regla(r61,[emocion(nostalgia),objetivo(cambiar)],perfil(alta,alto)).
+descripcion(r61,'Regla aprendida: para nostalgia con objetivo cambiar conviene musica de energia alta y animo alto.').
