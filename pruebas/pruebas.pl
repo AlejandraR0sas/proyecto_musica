@@ -43,7 +43,7 @@ caso(t04, [animo-neutro, energia-alta, tension-alta, contexto-estudiar, objetivo
 caso(t05, [animo-alto, energia-alta, tension-baja, contexto-fiesta, objetivo-acompanar],
      [r03, r34], ok(alegria, perfil(alta, alto))).
 caso(t06, [animo-alto, energia-alta, tension-baja, contexto-fiesta, objetivo-cambiar],
-     [r03], sin_perfil(alegria)).
+     [r03, r42], ok(alegria, perfil(media, neutro))).
 caso(t07, [animo-neutro, energia-media, tension-media, contexto-estudiar, objetivo-acompanar],
      [], sin_emocion).
 caso(t08, [animo-bajo, energia-baja],
