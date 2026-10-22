@@ -24,6 +24,16 @@
      6. Boton "Nueva consulta"  -> limpiar_hechos y reiniciar los menus.
      7. Mensajes claros en: datos invalidos, datos incompletos, sin emocion,
         sin perfil, sin canciones.
+     8. CAMPO "Escribe tu emocion" (opcional) + aprendizaje. Ver el modo
+        consola en main.pl (preguntar_emocion_libre/1 y aprender_dialogo/2),
+        que es la referencia de como debe comportarse:
+        - normalizar(+Texto,-Nombre) y resolver_emocion(+Nombre,-Emocion)
+        - si resolver_emocion FALLA -> pedir 2 perfiles (acompanar y cambiar)
+          con menus de energia y animo, y llamar
+          aprender_emocion(Nombre, perfil(E1,A1), perfil(E2,A2)).
+        - luego: capturar contexto y objetivo, declarar_emocion(Emocion) y
+            ejecutar_consulta_directa(Resultado) (en vez de ejecutar_consulta/1).
+
 
    PREDICADOS DE LOS DEMAS QUE USARAS (no los reimplementes):
      capturar(+Var,+Valor)  validar(+Var,+Valor)  mensaje_invalido(+V,+Val,-Msg)

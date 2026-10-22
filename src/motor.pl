@@ -96,9 +96,10 @@ tomar(N, Lista, Primeros) :-
 % ---- Flujo completo ----------------------------------------------------------
 ejecutar_consulta(Resultado) :-
     faltantes(Faltan),
-    (   Faltan \== []
+        (   Faltan \== []
     ->  Resultado = incompleto(Faltan)
-    ;   limpiar_derivados,
+    ;   retractall(emocion_declarada(_)),
+        limpiar_derivados,
         inferir,
         resultado_final(Resultado)
     ).
