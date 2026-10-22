@@ -88,6 +88,20 @@ catalogo_emocion(estres,     'Tension alta con mucha activacion.').
 catalogo_emocion(enojo,      'Tension alta, animo bajo y energia alta.').
 catalogo_emocion(calma,      'Baja tension, animo estable.').
 catalogo_emocion(motivacion, 'Animo y energia altos orientados a una actividad.').
+/* ---------------------------------------------------------------------------
+   2b) SINONIMOS: palabras que el usuario puede escribir y que significan una
+       emocion del catalogo.  sinonimo(PalabraEscrita, EmocionDelCatalogo).
+       (minusculas, sin acentos).
+   --------------------------------------------------------------------------- */
+sinonimo(triste,      tristeza).
+sinonimo(feliz,       alegria).
+sinonimo(contento,    alegria).
+sinonimo(estresado,   estres).
+sinonimo(ansioso,     estres).
+sinonimo(enojado,     enojo).
+sinonimo(molesto,     enojo).
+sinonimo(tranquilo,   calma).
+sinonimo(motivado,    motivacion).
 
 /* ---------------------------------------------------------------------------
    3) REGLAS - ETAPA 1: respuestas del usuario -> emocion(E)
