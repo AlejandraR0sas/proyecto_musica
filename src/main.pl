@@ -9,15 +9,18 @@
        ?- consola.            % fuerza el modo consola
        ?- correr_pruebas.     % corre todos los casos de pruebas/pruebas.pl
 
-   ORDEN DE CARGA: conocimiento -> hechos -> motor -> explicacion -> musica ->
-   interfaz -> pruebas. Las rutas son relativas a ESTE archivo.
+   ORDEN DE CARGA: conocimiento (reglas, canciones, aprendido) -> hechos ->
+   motor -> explicacion -> aprendizaje -> musica -> interfaz -> pruebas.
+   Las rutas son relativas a ESTE archivo.
    ============================================================================ */
 
 :- [ '../conocimiento/reglas',
      '../conocimiento/canciones',
+     '../conocimiento/aprendido',
      hechos,
      motor,
      explicacion,
+     aprendizaje,
      musica,
      interfaz,
      '../pruebas/pruebas' ].
@@ -30,7 +33,7 @@ iniciar :-
         consola
     ).
 
-% ---- Modo consola (plan B, y sirve para depurar sin GUI) -------------------
+% ---- Modo consola (plan B, y referencia de comportamiento para la GUI) ------
 consola :-
     format('~n=== Recomendador de musica por emocion ===~n'),
     consulta_consola,
@@ -41,10 +44,71 @@ consola :-
 
 consulta_consola :-
     limpiar_hechos,
-    forall(variable(V, _, _), preguntar_variable(V)),
-    ejecutar_consulta(Resultado),
+    preguntar_emocion_libre(Emocion),
+    (   Emocion == ninguna
+    ->  % camino 1: 5 preguntas, el sistema infiere la emocion
+        forall(variable(V, _, _), preguntar_variable(V)),
+        ejecutar_consulta(Resultado)
+    ;   % camino 2: el usuario dijo su emocion, solo falta contexto y objetivo
+        forall(member(V, [contexto, objetivo]), preguntar_variable(V)),
+        declarar_emocion(Emocion),
+        ejecutar_consulta_directa(Resultado)
+    ),
     mostrar_resultado(Resultado).
 
+% ---- Emocion escrita por el usuario (con aprendizaje) -------------------------
+preguntar_emocion_libre(Emocion) :-
+    emociones_conocidas(Lista),
+    atomic_list_concat(Lista, ', ', Txt),
+    format('~nComo te sientes? Escribe una emocion (conocidas: ~w).~n', [Txt]),
+    format('Si escribes una que no conozco, te pedire ayuda para aprenderla.~n'),
+    format('O presiona Enter para que te haga unas preguntas.~n> '),
+    leer_atomo(Texto),
+    (   Texto == ''
+    ->  Emocion = ninguna
+    ;   emocion_desde_texto(Texto, Emocion)
+    ).
+
+% Devuelve una emocion conocida (o recien aprendida) o 'ninguna'.
+emocion_desde_texto(Texto, Emocion) :-
+    normalizar(Texto, Nombre),
+    (   resolver_emocion(Nombre, E)
+    ->  Emocion = E
+    ;   aprender_dialogo(Nombre, Emocion)
+    ).
+
+aprender_dialogo(Nombre, Emocion) :-
+    format('~nNo conozco la emocion "~w". Ayudame a aprenderla.~n', [Nombre]),
+    format('Si quisieras ACOMPANAR esa emocion, que musica te iria bien?~n'),
+    preguntar_perfil(P1),
+    format('Y si quisieras CAMBIARLA, que musica te ayudaria?~n'),
+    preguntar_perfil(P2),
+    (   catch(aprender_emocion(Nombre, P1, P2), Error,
+              ( print_message(error, Error), fail ))
+    ->  format('~nListo, aprendi "~w" y la guarde en conocimiento/aprendido.pl.~n',
+               [Nombre]),
+        Emocion = Nombre
+    ;   format('~nNo pude guardar esa emocion (nombre no valido).~n'),
+        Emocion = ninguna
+    ).
+
+preguntar_perfil(perfil(E, A)) :-
+    variable(energia, ValoresE, _),
+    variable(animo,   ValoresA, _),
+    preguntar_valor('Energia de la musica', ValoresE, E),
+    preguntar_valor('Animo de la musica',   ValoresA, A).
+
+preguntar_valor(Pregunta, Valores, Valor) :-
+    atomic_list_concat(Valores, ' / ', Opciones),
+    format('  ~w (~w): ', [Pregunta, Opciones]),
+    leer_atomo(R),
+    (   memberchk(R, Valores)
+    ->  Valor = R
+    ;   format('  Valor no valido.~n'),
+        preguntar_valor(Pregunta, Valores, Valor)
+    ).
+
+% ---- Preguntas normales ------------------------------------------------------
 preguntar_variable(V) :-
     variable(V, Valores, Pregunta),
     atomic_list_concat(Valores, ' / ', Opciones),
@@ -75,7 +139,7 @@ confirmar(Prompt) :-
 % ---- Presentacion de resultados -------------------------------------------
 mostrar_resultado(ok(Emocion, perfil(E, A), Canciones)) :-
     !,
-    format('~nEmocion detectada: ~w~n', [Emocion]),
+    format('~nEmocion: ~w~n', [Emocion]),
     format('Perfil musical: energia ~w, animo ~w~n', [E, A]),
     format('~nTe recomiendo:~n'),
     forall(nth1(N, Canciones, C),
@@ -88,15 +152,33 @@ mostrar_resultado(incompleto(Faltantes)) :-
 mostrar_resultado(sin_emocion) :-
     !,
     format('~nNo pude determinar tu emocion con esas respuestas (ninguna regla aplica).~n'),
-    mostrar_explicacion.
+    mostrar_explicacion,
+    ofrecer_decir_emocion.
 mostrar_resultado(sin_perfil(Emocion)) :-
     !,
-    format('~nDetecte la emocion "~w", pero no hay una regla para elegir musica con tu objetivo.~n', [Emocion]),
+    format('~nDetecte la emocion "~w", pero no hay una regla para elegir musica con tu objetivo.~n',
+           [Emocion]),
     mostrar_explicacion.
 mostrar_resultado(sin_canciones(perfil(E, A))) :-
     !,
-    format('~nHay un perfil (energia ~w, animo ~w) pero no hay canciones en el catalogo.~n', [E, A]),
+    format('~nHay un perfil (energia ~w, animo ~w) pero no hay canciones en el catalogo.~n',
+           [E, A]),
     mostrar_explicacion.
+
+% Cuando el sistema no logra inferir la emocion, se la pide al usuario
+% (y la aprende si no la conoce).
+ofrecer_decir_emocion :-
+    format('~nSi me dices con una palabra como te sientes, lo intento (Enter para omitir): '),
+    leer_atomo(Texto),
+    (   Texto == ''
+    ->  true
+    ;   emocion_desde_texto(Texto, Emocion),
+        Emocion \== ninguna
+    ->  declarar_emocion(Emocion),
+        ejecutar_consulta_directa(Resultado),
+        mostrar_resultado(Resultado)
+    ;   true
+    ).
 
 mostrar_explicacion :-
     explicar(Texto),

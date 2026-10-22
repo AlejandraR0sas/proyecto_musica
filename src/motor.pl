@@ -117,3 +117,16 @@ resultado_final(Resultado) :-
             )
         )
     ).
+% ---- Flujo directo (cuando el usuario escribe su emocion) ---------------------
+ejecutar_consulta_directa(Resultado) :-
+    (   \+ respuesta(contexto, _) ; \+ respuesta(objetivo, _)
+    ->  findall(V, (member(V, [contexto, objetivo]), \+ respuesta(V, _)), Faltan),
+        Resultado = incompleto(Faltan)
+    ;   \+ emocion_declarada(_)
+    ->  Resultado = sin_emocion
+    ;   once(emocion_declarada(Emocion)),
+        limpiar_derivados,
+        assertz(hecho(emocion(Emocion))),
+        inferir,
+        resultado_final(Resultado)
+    ).
