@@ -43,7 +43,7 @@ caso(t04, [animo-neutro, energia-alta, tension-alta, contexto-estudiar, objetivo
 caso(t05, [animo-alto, energia-alta, tension-baja, contexto-fiesta, objetivo-acompanar],
      [r03, r34], ok(alegria, perfil(alta, alto))).
 caso(t06, [animo-alto, energia-alta, tension-baja, contexto-fiesta, objetivo-cambiar],
-     [r03], sin_perfil(alegria)).
+     [r03, r42], ok(alegria, perfil(media, neutro))).
 caso(t07, [animo-neutro, energia-media, tension-media, contexto-estudiar, objetivo-acompanar],
      [], sin_emocion).
 caso(t08, [animo-bajo, energia-baja],
@@ -55,13 +55,31 @@ caso(t10, [],
 % TODO Ale: un caso normal por cada emocion nueva (enojo, calma, motivacion),
 %           un caso sin_canciones (si aplica) y uno de "nueva consulta".
 
+% Casos normales para las emociones anadidas (enojo, calma, motivacion y estres)
+caso(t11, [animo-bajo, energia-alta, tension-alta, contexto-estudiar, objetivo-acompanar],
+     [r04, r36], ok(enojo, perfil(alta, bajo))).
+caso(t12, [animo-bajo, energia-alta, tension-alta, contexto-estudiar, objetivo-cambiar],
+     [r04, r37], ok(enojo, perfil(media, alto))).
+caso(t13, [animo-neutro, energia-baja, tension-baja, contexto-relajarse, objetivo-acompanar],
+     [r05, r38], ok(calma, perfil(baja, neutro))).
+caso(t14, [animo-neutro, energia-baja, tension-baja, contexto-relajarse, objetivo-cambiar],
+     [r05, r39], ok(calma, perfil(media, alto))).
+caso(t15, [animo-alto, energia-alta, tension-media, contexto-ejercicio, objetivo-acompanar],
+     [r06, r40], ok(motivacion, perfil(alta, alto))).
+caso(t16, [animo-alto, energia-alta, tension-media, contexto-ejercicio, objetivo-cambiar],
+     [r06, r41], ok(motivacion, perfil(media, neutro))).
+caso(t17, [animo-neutro, energia-alta, tension-alta, contexto-estudiar, objetivo-acompanar],
+     [r02, r35], ok(estres, perfil(media, bajo))).
+
 % ---- Ejecucion ---------------------------------------------------------------
 correr_pruebas :-
     format('~n===== PRUEBAS =====~n'),
     findall(Estado,
             ( caso(Id, Entrada, ReglasEsp, Esperado),
               ejecutar_caso(Id, Entrada, ReglasEsp, Esperado, Estado) ),
-            Estados),
+            Estados0),
+    prueba_aprendizaje(EstadoAprendizaje),
+    append(Estados0, [EstadoAprendizaje], Estados),
     include(==(pass), Estados, Pasan),
     length(Pasan, NPasan),
     length(Estados, Total),
@@ -97,3 +115,23 @@ capturar_entrada([V-Val | Resto], Invalida) :-
 resumen(ok(E, P, _), ok(E, P))        :- !.
 resumen(incompleto(_), incompleto)    :- !.
 resumen(Otro, Otro).
+% ---- T18: aprendizaje de una emocion nueva (solo en memoria, no toca el archivo)
+prueba_aprendizaje(Estado) :-
+    limpiar_hechos,
+    Nombre = emocion_de_prueba,
+    registrar_emocion(Nombre, perfil(baja, bajo), perfil(media, alto)),
+    capturar(contexto, relajarse),
+    capturar(objetivo, cambiar),
+    declarar_emocion(Nombre),
+    ejecutar_consulta_directa(Resultado),
+    resumen(Resultado, Resumen),
+    findall(R, disparada(R), Reglas),
+    (   Resumen == ok(Nombre, perfil(media, alto))
+    ->  Estado = pass, Etiqueta = 'PASS'
+    ;   Estado = fail, Etiqueta = 'FAIL'
+    ),
+    format('T18  ~w  (aprender una emocion nueva y usarla)~n', [Etiqueta]),
+    format('    esperado: ok(~w, perfil(media,alto))~n', [Nombre]),
+    format('    obtenido: ~w  reglas ~w~n', [Resumen, Reglas]),
+    olvidar_emocion(Nombre),
+    limpiar_hechos.

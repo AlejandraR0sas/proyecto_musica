@@ -31,14 +31,18 @@ explicar_lineas(Lineas) :-
     findall(Txt2,
             ( disparada(Id), linea_regla(Id, Txt2) ),
             LineasReglas),
-    (   LineasReglas == []
+        (   LineasReglas == []
     ->  Cuerpo = ['  (no se aplico ninguna regla)']
     ;   Cuerpo = LineasReglas
     ),
-    append(['Datos capturados:' | LineasDatos],
+    findall(Txt3,
+            ( emocion_declarada(E),
+              format(atom(Txt3), '  - emocion indicada por ti = ~w', [E]) ),
+            LineasDecl),
+    append(LineasDatos, LineasDecl, Datos),
+    append(['Datos capturados:' | Datos],
            ['Reglas aplicadas:' | Cuerpo],
            Lineas).
-
 explicar(Texto) :-
     explicar_lineas(Lineas),
     atomic_list_concat(Lineas, '\n', Texto).

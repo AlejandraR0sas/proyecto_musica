@@ -1,37 +1,92 @@
+
 :- encoding(utf8).
-/* ============================================================================
-   src/musica.pl                    >>> RESPONSABLE: ANTULIO <<<
-   REPRODUCCION / ENLACES DE MUSICA
-   ============================================================================
-   Decision de alcance: NO usamos API de Spotify. Solo abrimos el enlace de la
-   cancion en el navegador (YouTube/Spotify), que funciona en cualquier PC y no
-   requiere claves, cuenta Premium ni internet para programar.
-
-   PREDICADOS PUBLICOS (ya funcionan; Antulio puede mejorarlos):
-     texto_cancion(+Cancion, -Texto) : 'Titulo - Artista (genero, idioma)'
-     reproducir(+Cancion)            : abre el Enlace en el navegador.
-                                       Si falla, imprime el enlace para copiarlo.
-
-   Una Cancion es el termino completo:
-     cancion(Id, Titulo, Artista, Genero, Energia, Animo, Idioma, Enlace)
-
-   EJEMPLO:
-     ?- cancion(c001,T,A,G,E,N,I,L), reproducir(cancion(c001,T,A,G,E,N,I,L)).
-
-   IDEAS OPCIONALES (solo si sobra tiempo, NO antes del viernes):
-   - Boton "Abrir todas" que abra las 3 canciones.
-   - Generar la URL de busqueda desde Titulo+Artista si Enlace esta vacio.
-   NO subir claves de ninguna API al repositorio.
-   ============================================================================ */
-
 :- use_module(library(www_browser)).
+:- use_module(library(uri)).
 
-texto_cancion(cancion(_Id, Titulo, artistas, Genero, _E, _A, Idioma, _Enlace), Texto) :-
-    format(atom(Texto), '~w - ~w (~w, ~w)', [Titulo, Artista, Genero, Idioma]).
+% ============================================================
+% REPRESENTACION DE CANCIONES
+% cancion(Id, Titulo, Artista, Genero, Energia, Animo, Idioma, Enlace)
+% ============================================================
 
-reproducir(cancion(_Id, _T, _Ar, _G, _E, _A, _I, Enlace)) :-
-    (   catch(www_open_url(Enlace), _Error, fail)
-    ->  true
-    ;   format('No pude abrir el navegador. Copia este enlace:~n  ~w~n', [Enlace])
+texto_cancion(
+    cancion(_, Titulo, Artista, Genero, Energia, Animo, Idioma, _),
+    Texto
+) :-
+    format(
+        atom(Texto),
+        '~w - ~w | Genero: ~w | Idioma: ~w | Energia: ~w | Animo: ~w',
+        [Titulo, Artista, Genero, Idioma, Energia, Animo]
     ).
 
+% ============================================================
+% REPRODUCCION
+% ============================================================
+
+reproducir(
+    cancion(_, Titulo, Artista, _, _, _, _, EnlaceOriginal)
+) :-
+    obtener_enlace_valido(
+        Titulo,
+        Artista,
+        EnlaceOriginal,
+        EnlaceFinal
+    ),
+    (
+        catch(www_open_url(EnlaceFinal), _, fail)
+    ->
+        true
+    ;
+        format(
+            '~nNo pude abrir el navegador automaticamente.~nEnlace: ~w~n',
+            [EnlaceFinal]
+        )
+    ).
+
+reproducir_todas([]).
+
+reproducir_todas([Cancion|Resto]) :-
+    reproducir(Cancion),
+    reproducir_todas(Resto).
+
+% ============================================================
+% ENLACES
+% ============================================================
+
+obtener_enlace_valido(_, _, Enlace, Enlace) :-
+    nonvar(Enlace),
+    atom(Enlace),
+    Enlace \== '',
+    sub_atom(Enlace, 0, 8, _, 'https://'),
+    !.
+
+obtener_enlace_valido(Titulo, Artista, _, Enlace) :-
+    format(atom(Busqueda), '~w ~w', [Titulo, Artista]),
+    uri_encoded(query_value, Busqueda, Codificada),
+    format(
+        atom(Enlace),
+        'https://www.youtube.com/results?search_query=~w',
+        [Codificada]
+    ).
+
+% ============================================================
+% CONSTRUCCION DE UNA CANCION SUGERIDA
+% Compatible con el formato usado por el proyecto.
+% ============================================================
+
+crear_cancion_sugerida(
+    Titulo,
+    Artista,
+    Genero,
+    Idioma,
+    cancion(
+        sugerida,
+        Titulo,
+        Artista,
+        Genero,
+        media,
+        neutro,
+        Idioma,
+        ''
+    )
+) :-
+    maplist(atom, [Titulo, Artista, Genero, Idioma]).

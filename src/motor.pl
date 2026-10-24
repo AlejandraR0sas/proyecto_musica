@@ -96,9 +96,10 @@ tomar(N, Lista, Primeros) :-
 % ---- Flujo completo ----------------------------------------------------------
 ejecutar_consulta(Resultado) :-
     faltantes(Faltan),
-    (   Faltan \== []
+        (   Faltan \== []
     ->  Resultado = incompleto(Faltan)
-    ;   limpiar_derivados,
+    ;   retractall(emocion_declarada(_)),
+        limpiar_derivados,
         inferir,
         resultado_final(Resultado)
     ).
@@ -116,4 +117,17 @@ resultado_final(Resultado) :-
             ;   Resultado = ok(Emocion, perfil(E, A), Canciones)
             )
         )
+    ).
+% ---- Flujo directo (cuando el usuario escribe su emocion) ---------------------
+ejecutar_consulta_directa(Resultado) :-
+    (   \+ respuesta(contexto, _) ; \+ respuesta(objetivo, _)
+    ->  findall(V, (member(V, [contexto, objetivo]), \+ respuesta(V, _)), Faltan),
+        Resultado = incompleto(Faltan)
+    ;   \+ emocion_declarada(_)
+    ->  Resultado = sin_emocion
+    ;   once(emocion_declarada(Emocion)),
+        limpiar_derivados,
+        assertz(hecho(emocion(Emocion))),
+        inferir,
+        resultado_final(Resultado)
     ).

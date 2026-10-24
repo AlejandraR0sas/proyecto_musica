@@ -29,7 +29,7 @@
      ?- faltantes(L).                 % L = [energia, tension, contexto, objetivo]
    ============================================================================ */
 
-:- dynamic hecho/1, disparada/1.
+:- dynamic hecho/1, disparada/1, emocion_declarada/1.
 
 % validar(+Var, +Valor): usa variable/3 de conocimiento/reglas.pl
 validar(Var, Valor) :-
@@ -64,8 +64,12 @@ faltantes(Lista) :-
 
 limpiar_derivados :-
     retractall(disparada(_)),
+    retractall(hecho(emocion(_))),
+    retractall(hecho(perfil(_, _))),
     forall(regla(_, _, Conclusion), retractall(hecho(Conclusion))).
 
 limpiar_hechos :-
     retractall(hecho(_)),
+    retractall(emocion_declarada(_)),
     retractall(disparada(_)).
+
